@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Case Study — Turnover Hôtelier</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=JetBrains+Mono:wght@300;400;500;700&family=Lato:wght@300;400&display=swap');
+
+:root {
+  --bg: #07080d;
+  --surface: #0d0f18;
+  --border: rgba(255,255,255,0.06);
+  --gold: #e8b84b;
+  --gold-dim: rgba(232,184,75,0.18);
+  --text: #e8e4dc;
+  --text-dim: rgba(232,228,220,0.45);
+  --ppm:  #e05c2a;
+  --lmx:  #2ab8e0;
+  --psy:  #a855f7;
+  --rwd:  #22c55e;
+  --eng:  #f59e0b;
+  --gap:  #f43f5e;
+  --new:  #e8b84b;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); }
+
+/* ─── GRAIN OVERLAY ─── */
+body::after {
+  content:'';
+  position:fixed; inset:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none; z-index:9999; opacity:0.35;
+}
+
+/* ─── HEADER ─── */
+#header {
+  position:fixed; top:0; left:0; right:0; height:68px;
+  background:rgba(7,8,13,0.92);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 28px; z-index:500;
+}
+.h-left { display:flex; flex-direction:column; gap:3px; }
+.h-eyebrow {
+  font-family:'JetBrains Mono',monospace; font-size:8.5px;
+  letter-spacing:0.22em; color:var(--gold); text-transform:uppercase;
+  display:flex; align-items:center; gap:10px;
+}
+.h-eyebrow::before {
+  content:''; width:20px; height:1px; background:var(--gold);
+}
+.h-title {
+  font-family:'Playfair Display',serif; font-size:18px; font-weight:700;
+  color:var(--text); letter-spacing:0.02em;
+}
+.h-right { display:flex; align-items:center; gap:12px; }
+.stat-chip {
+  display:flex; flex-direction:column; align-items:center;
+  padding:6px 14px; border:1px solid var(--border);
+  background:rgba(255,255,255,0.03);
+}
+.stat-chip .val {
+  font-family:'Playfair Display',serif; font-size:17px; font-weight:700;
+  color:var(--gold); line-height:1;
+}
+.stat-chip .lbl {
+  font-family:'JetBrains Mono',monospace; font-size:6.5px;
+  letter-spacing:0.15em; text-transform:uppercase; color:var(--text-dim);
+  margin-top:2px;
+}
+.h-actions { display:flex; gap:8px; margin-left:16px; }
+.btn {
+  font-family:'JetBrains Mono',monospace; font-size:8px;
+  letter-spacing:0.14em; text-transform:uppercase;
+  padding:8px 16px; cursor:pointer; border:1px solid;
+  transition:all 0.18s; background:transparent;
+}
+.btn-ghost { border-color:var(--border); color:var(--text-dim); }
+.btn-ghost:hover { border-color:rgba(255,255,255,0.25); color:var(--text); }
+.btn-gold  { border-color:var(--gold); color:var(--gold); }
+.btn-gold:hover  { background:var(--gold); color:var(--bg); }
+
+/* ─── FOOTER ─── */
+#footer {
+  position:fixed; bottom:0; left:0; right:0; height:48px;
+  background:rgba(7,8,13,0.92); backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 28px; z-index:500;
+}
+.legend { display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+.leg-item { display:flex; align-items:center; gap:7px; cursor:pointer; }
+.leg-item:hover .leg-label { color:var(--text); }
+.leg-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.leg-ring { width:9px; height:9px; border-radius:50%; flex-shrink:0; border:1.5px dashed; background:transparent; }
+.leg-label {
+  font-family:'JetBrains Mono',monospace; font-size:7.5px;
+  letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim);
+  transition:color 0.15s;
+}
+.zoom-ctrl { display:flex; align-items:center; gap:6px; }
+.zbtn {
+  width:26px; height:26px; border:1px solid var(--border); background:transparent;
+  color:var(--text-dim); font-size:14px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'JetBrains Mono',monospace; transition:all 0.15s;
+}
+.zbtn:hover { border-color:rgba(255,255,255,0.2); color:var(--text); }
+#z-pct {
+  font-family:'JetBrains Mono',monospace; font-size:9px;
+  color:var(--text-dim); min-width:36px; text-align:center;
+}
+
+/* ─── MAP ARENA ─── */
+#arena {
+  position:fixed; top:68px; left:0; right:0; bottom:48px;
+  overflow:hidden; cursor:grab;
+}
+#arena.dragging { cursor:grabbing; }
+
+#stage { position:absolute; width:4000px; height:2800px; transform-origin:0 0; }
+
+canvas#cvs {
+  position:absolute; top:0; left:0; pointer-events:none; z-index:3;
+}
+
+/* ─── GRID BACKGROUND ─── */
+#grid-bg {
+  position:absolute; inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+  background-size:60px 60px;
+  pointer-events:none; z-index:0;
+}
+
+/* ─── REGION HALOS ─── */
+.rhalo {
+  position:absolute; border-radius:50%;
+  pointer-events:none; z-index:1;
+}
+
+/* ─── REGION LABEL ─── */
+.rlabel {
+  position:absolute; pointer-events:none; z-index:4;
+  display:flex; align-items:center; gap:10px;
+}
+.rlabel-line { height:1px; width:32px; flex-shrink:0; }
+.rlabel-text {
+  font-family:'JetBrains Mono',monospace; font-size:8px;
+  letter-spacing:0.2em; text-transform:uppercase;
+  white-space:nowrap; opacity:0.5;
+}
+
+/* ─── NODES ─── */
+.n {
+  position:absolute; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  text-align:center; cursor:pointer;
+  font-family:'JetBrains Mono',monospace; font-weight:500;
+  text-transform:uppercase; letter-spacing:0.06em; line-height:1.35;
+  padding:10px; user-select:none;
+  transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.22s;
+  z-index:10;
+}
+.n:hover { transform:scale(1.12) !important; z-index:200; }
+.n.active { transform:scale(1.08) !important; z-index:200; }
+
+.xl { width:175px; height:175px; font-size:10.5px; }
+.lg { width:130px; height:130px; font-size:9.5px; }
+.md { width:96px;  height:96px;  font-size:8.5px; }
+.sm { width:72px;  height:72px;  font-size:7.5px; padding:6px; }
+
+/* color variants — dark glass style */
+.ppm { background:radial-gradient(circle at 38% 35%,rgba(224,92,42,0.22),rgba(224,92,42,0.04)); border:1.5px solid rgba(224,92,42,0.6); color:#f8b89a; box-shadow:0 0 0 0 rgba(224,92,42,0); }
+.ppm:hover { box-shadow:0 0 36px rgba(224,92,42,0.35), inset 0 0 24px rgba(224,92,42,0.08); }
+
+.lmx { background:radial-gradient(circle at 38% 35%,rgba(42,184,224,0.22),rgba(42,184,224,0.04)); border:1.5px solid rgba(42,184,224,0.6); color:#9ae8f8; box-shadow:0 0 0 0 rgba(42,184,224,0); }
+.lmx:hover { box-shadow:0 0 36px rgba(42,184,224,0.35), inset 0 0 24px rgba(42,184,224,0.08); }
+
+.psy { background:radial-gradient(circle at 38% 35%,rgba(168,85,247,0.22),rgba(168,85,247,0.04)); border:1.5px solid rgba(168,85,247,0.6); color:#d8b4fe; box-shadow:0 0 0 0 rgba(168,85,247,0); }
+.psy:hover { box-shadow:0 0 36px rgba(168,85,247,0.35), inset 0 0 24px rgba(168,85,247,0.08); }
+
+.rwd { background:radial-gradient(circle at 38% 35%,rgba(34,197,94,0.2),rgba(34,197,94,0.04)); border:1.5px solid rgba(34,197,94,0.6); color:#86efac; box-shadow:0 0 0 0 rgba(34,197,94,0); }
+.rwd:hover { box-shadow:0 0 36px rgba(34,197,94,0.35), inset 0 0 24px rgba(34,197,94,0.08); }
+
+.eng { background:radial-gradient(circle at 38% 35%,rgba(245,158,11,0.22),rgba(245,158,11,0.04)); border:1.5px solid rgba(245,158,11,0.6); color:#fcd34d; box-shadow:0 0 0 0 rgba(245,158,11,0); }
+.eng:hover { box-shadow:0 0 36px rgba(245,158,11,0.35), inset 0 0 24px rgba(245,158,11,0.08); }
+
+.gap {
+  background:radial-gradient(circle at 38% 35%,rgba(244,63,94,0.18),rgba(244,63,94,0.04));
+  border:1.5px dashed rgba(244,63,94,0.7); color:#fda4af;
+  animation:gap-pulse 2.8s ease-in-out infinite;
+}
+.gap:hover { box-shadow:0 0 40px rgba(244,63,94,0.5), inset 0 0 28px rgba(244,63,94,0.1); }
+@keyframes gap-pulse {
+  0%,100% { box-shadow:0 0 12px rgba(244,63,94,0.2); }
+  50%      { box-shadow:0 0 32px rgba(244,63,94,0.5), 0 0 64px rgba(244,63,94,0.15); }
+}
+
+.ctr {
+  background:radial-gradient(circle at 40% 38%, rgba(232,184,75,0.18), rgba(232,184,75,0.03));
+  border:2px solid var(--gold); color:var(--gold);
+  box-shadow:0 0 60px rgba(232,184,75,0.2), inset 0 0 30px rgba(232,184,75,0.04);
+  font-size:12px; font-weight:700;
+  animation:ctr-pulse 4s ease-in-out infinite;
+}
+.ctr:hover { box-shadow:0 0 80px rgba(232,184,75,0.4), inset 0 0 40px rgba(232,184,75,0.1); }
+@keyframes ctr-pulse {
+  0%,100% { box-shadow:0 0 60px rgba(232,184,75,0.2), inset 0 0 30px rgba(232,184,75,0.04); }
+  50%      { box-shadow:0 0 80px rgba(232,184,75,0.32), inset 0 0 40px rgba(232,184,75,0.07); }
+}
+
+.nw {
+  background:radial-gradient(circle at 40% 38%, rgba(232,184,75,0.12), rgba(232,184,75,0.02));
+  border:2px dashed rgba(232,184,75,0.6); color:var(--gold);
+  box-shadow:0 0 50px rgba(232,184,75,0.15);
+  font-family:'Playfair Display',serif; font-style:italic;
+  font-size:13px; font-weight:700; letter-spacing:0.03em;
+  animation:nw-pulse 3.5s ease-in-out infinite;
+}
+.nw:hover { box-shadow:0 0 80px rgba(232,184,75,0.4); }
+@keyframes nw-pulse {
+  0%,100% { box-shadow:0 0 50px rgba(232,184,75,0.15), 0 0 0 0 rgba(232,184,75,0); }
+  50%      { box-shadow:0 0 80px rgba(232,184,75,0.3), 0 0 0 8px rgba(232,184,75,0.05); }
+}
+
+/* ─── DETAIL PANEL ─── */
+#panel {
+  position:fixed; top:68px; right:-420px; width:400px; bottom:48px;
+  background:rgba(10,11,18,0.97); backdrop-filter:blur(24px);
+  border-left:1px solid var(--border);
+  transition:right 0.38s cubic-bezier(0.25,0,0,1);
+  z-index:400; overflow-y:auto;
+  display:flex; flex-direction:column;
+}
+#panel.open { right:0; }
+
+.panel-top-bar {
+  height:3px; width:100%; flex-shrink:0;
+  transition:background 0.3s;
+}
+.panel-content { padding:28px 26px 40px; flex:1; }
+.panel-eyebrow {
+  font-family:'JetBrains Mono',monospace; font-size:8px;
+  letter-spacing:0.22em; text-transform:uppercase;
+  margin-bottom:10px; transition:color 0.3s;
+}
+.panel-title {
+  font-family:'Playfair Display',serif; font-size:24px;
+  font-weight:700; line-height:1.2; color:var(--text);
+  margin-bottom:8px;
+}
+.panel-source {
+  font-family:'JetBrains Mono',monospace; font-size:8px;
+  letter-spacing:0.12em; text-transform:uppercase;
+  color:var(--text-dim); margin-bottom:20px;
+  padding:5px 12px; border:1px solid var(--border);
+  display:inline-block;
+}
+.panel-divider { height:1px; background:var(--border); margin-bottom:20px; }
+.panel-body {
+  font-family:'Lato',sans-serif; font-size:14.5px;
+  font-weight:300; line-height:1.82; color:rgba(232,228,220,0.82);
+}
+.panel-close {
+  position:absolute; top:16px; right:18px;
+  background:none; border:1px solid var(--border);
+  color:var(--text-dim); font-family:'JetBrains Mono',monospace;
+  font-size:8px; letter-spacing:0.1em; padding:5px 10px;
+  cursor:pointer; text-transform:uppercase; transition:all 0.15s;
+}
+.panel-close:hover { border-color:rgba(255,255,255,0.2); color:var(--text); }
+
+/* ─── MINI TOOLTIP ─── */
+#tip {
+  position:fixed; z-index:800;
+  background:rgba(10,11,18,0.96); backdrop-filter:blur(16px);
+  border:1px solid var(--border); padding:12px 16px;
+  max-width:260px; pointer-events:none; display:none;
+}
+.tip-src  { font-family:'JetBrains Mono',monospace; font-size:7px; letter-spacing:0.18em; text-transform:uppercase; margin-bottom:5px; }
+.tip-name { font-family:'Playfair Display',serif; font-size:15px; font-weight:700; color:var(--text); line-height:1.2; margin-bottom:7px; }
+.tip-hint { font-family:'JetBrains Mono',monospace; font-size:7.5px; color:var(--text-dim); letter-spacing:0.08em; }
+
+/* ─── INTRO OVERLAY ─── */
+#intro {
+  position:fixed; inset:0; z-index:999;
+  background:var(--bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  animation:fadeout 0.6s ease 2.2s forwards;
+  pointer-events:none;
+}
+@keyframes fadeout { to { opacity:0; visibility:hidden; } }
+.intro-tag {
+  font-family:'JetBrains Mono',monospace; font-size:9px;
+  letter-spacing:0.28em; color:var(--gold); text-transform:uppercase;
+  margin-bottom:18px; opacity:0;
+  animation:fadein 0.5s ease 0.3s forwards;
+}
+@keyframes fadein { to { opacity:1; } }
+.intro-h {
+  font-family:'Playfair Display',serif; font-size:42px; font-weight:900;
+  color:var(--text); text-align:center; line-height:1.15;
+  max-width:700px; opacity:0;
+  animation:fadein 0.6s ease 0.6s forwards;
+}
+.intro-h em { color:var(--gold); font-style:italic; }
+.intro-sub {
+  font-family:'Lato',sans-serif; font-size:15px; font-weight:300;
+  color:var(--text-dim); text-align:center; margin-top:16px;
+  max-width:500px; opacity:0;
+  animation:fadein 0.6s ease 1s forwards;
+}
+.intro-bar {
+  width:200px; height:1px; background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  margin-top:28px; opacity:0;
+  animation:fadein 0.4s ease 1.5s forwards;
+}
+</style>
+</head>
+<body>
+
+<!-- INTRO SPLASH -->
+<div id="intro">
+  <div class="intro-tag">Étude de Cas · Management Hôtelier</div>
+  <h1 class="intro-h">Cartographie des <em>Déterminants</em><br>du Turnover Hôtelier</h1>
+  <p class="intro-sub">Interconnexions théoriques, lacunes identifiées et proposition d'un nouveau modèle RH intégratif</p>
+  <div class="intro-bar"></div>
+</div>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="h-left">
+    <div class="h-eyebrow">Mémoire de Recherche — Industrie Hôtelière &amp; Touristique</div>
+    <div class="h-title">Déterminants du Turnover — Cartographie Neurale Intégrative</div>
+  </div>
+  <div class="h-right">
+    <div class="stat-chip"><div class="val">4</div><div class="lbl">Théories</div></div>
+    <div class="stat-chip"><div class="val">5</div><div class="lbl">Lacunes</div></div>
+    <div class="stat-chip"><div class="val" style="color:var(--gold)">MIDDTH</div><div class="lbl">Nouvelle théorie</div></div>
+    <div class="stat-chip"><div class="val" style="color:var(--gold);font-size:12px;font-family:'Lato',sans-serif;font-weight:400;letter-spacing:0.04em">Samy Mohamed Ambes</div><div class="lbl">Créateur</div></div>
+    <div class="h-actions">
+      <button class="btn btn-ghost" onclick="resetView()">↺ Reset</button>
+      <button class="btn btn-gold" onclick="togglePanel(null, true)">Lire le modèle</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div id="panel">
+  <div class="panel-top-bar" id="ptbar"></div>
+  <div class="panel-content">
+    <button class="panel-close" onclick="closePanel()">✕ Fermer</button>
+    <div class="panel-eyebrow" id="p-eye">—</div>
+    <div class="panel-title" id="p-title">—</div>
+    <div class="panel-source" id="p-src">—</div>
+    <div class="panel-divider"></div>
+    <div class="panel-body" id="p-body">Cliquez sur n'importe quel nœud de la carte pour afficher une description théorique détaillée.</div>
+  </div>
+</div>
+
+<!-- MINI TOOLTIP -->
+<div id="tip">
+  <div class="tip-src" id="tip-src"></div>
+  <div class="tip-name" id="tip-name"></div>
+  <div class="tip-hint">Cliquer pour détails complets →</div>
+</div>
+
+<!-- MAP -->
+<div id="arena">
+  <div id="stage">
+    <div id="grid-bg"></div>
+    <canvas id="cvs"></canvas>
+
+    <!-- REGION HALOS -->
+    <div class="rhalo" style="width:900px;height:900px;left:20px;top:500px;background:radial-gradient(circle,rgba(224,92,42,0.07),transparent 70%)"></div>
+    <div class="rhalo" style="width:840px;height:840px;left:1060px;top:120px;background:radial-gradient(circle,rgba(42,184,224,0.07),transparent 70%)"></div>
+    <div class="rhalo" style="width:720px;height:720px;left:1920px;top:560px;background:radial-gradient(circle,rgba(168,85,247,0.07),transparent 70%)"></div>
+    <div class="rhalo" style="width:820px;height:820px;left:560px;top:1460px;background:radial-gradient(circle,rgba(34,197,94,0.06),transparent 70%)"></div>
+    <div class="rhalo" style="width:680px;height:680px;left:1380px;top:1380px;background:radial-gradient(circle,rgba(245,158,11,0.07),transparent 70%)"></div>
+    <div class="rhalo" style="width:1000px;height:1000px;left:2340px;top:700px;background:radial-gradient(circle,rgba(244,63,94,0.06),transparent 70%)"></div>
+
+    <!-- REGION LABELS -->
+    <div class="rlabel" style="left:60px;top:418px"><div class="rlabel-line" style="background:var(--ppm)"></div><div class="rlabel-text" style="color:var(--ppm)">I · Forces Push–Pull–Mooring</div></div>
+    <div class="rlabel" style="left:1040px;top:62px"><div class="rlabel-line" style="background:var(--lmx)"></div><div class="rlabel-text" style="color:var(--lmx)">II · Échange Leader–Membre (LMX)</div></div>
+    <div class="rlabel" style="left:1820px;top:476px"><div class="rlabel-line" style="background:var(--psy)"></div><div class="rlabel-text" style="color:var(--psy)">III · Contrat Psychologique</div></div>
+    <div class="rlabel" style="left:500px;top:1390px"><div class="rlabel-line" style="background:var(--rwd)"></div><div class="rlabel-text" style="color:var(--rwd)">IV · Récompenses &amp; États Affectifs</div></div>
+    <div class="rlabel" style="left:1220px;top:1268px"><div class="rlabel-line" style="background:var(--eng)"></div><div class="rlabel-text" style="color:var(--eng)">V · Engagement Affectif</div></div>
+    <div class="rlabel" style="left:2320px;top:394px"><div class="rlabel-line" style="background:var(--gap)"></div><div class="rlabel-text" style="color:var(--gap)">VI · Lacunes → Proposition MIDDTH</div></div>
+
+    <!-- ══ CENTRAL NODE ══ -->
+    <div class="n xl ctr" style="left:1448px;top:1000px;width:188px;height:188px"
+      data-eye="Variable Dépendante Centrale"
+      data-title="Intention de Départ"
+      data-src="Mobley (1977) · Griffeth, Hom & Gaertner (2000)"
+      data-col="var(--gold)"
+      data-colhex="#e8b84b"
+      data-body="Prédicteur cognitif immédiat du comportement de départ effectif — l'antécédent le plus direct et fiable du turnover volontaire effectif (Griffeth et al. 2000). Conceptualisée selon trois horizons temporels distincts : court terme (6 mois), moyen terme (12 mois) et long terme (24 mois). La conversion de l'intention en comportement réel peut être modérée par des facteurs situationnels : présence effective d'alternatives, contraintes financières, événements de vie imprévus. Point de convergence absolue de l'ensemble des chaînes causales du modèle intégratif.">
+      INTENTION<br>DE DÉPART
+    </div>
+
+    <!-- ══ BLOC I — PPM ══ -->
+    <div class="n xl ppm" style="left:210px;top:760px"
+      data-eye="Cadre Théorique I"
+      data-title="Modèle Push–Pull–Mooring"
+      data-src="Haldorai et al. (2019) · N = 304 · Hôtels États-Unis"
+      data-col="var(--ppm)" data-colhex="#e05c2a"
+      data-body="Adapté des théories classiques des migrations humaines (Ravenstein 1885 ; Lee 1966) avec l'ajout fondamental du facteur Mooring par Moon (1995). Transposé au comportement organisationnel par Bansal et al. (2005). Applied au turnover hôtelier par Haldorai et al. (2019) sur 304 employés hôteliers américains. Trois forces en interaction : Push (répulsion de l'emploi actuel), Pull (attraction vers les alternatives), Mooring (ancrages personnels modérateurs). Contribution empirique majeure : révèle une dynamique temporelle différenciée entre facteurs push (effet immédiat tous horizons) et pull (effet différé, moyen/long terme uniquement).">
+      MODÈLE<br>PPM
+    </div>
+
+    <div class="n md ppm" style="left:50px;top:524px" data-eye="Facteur Push · Région I" data-title="Surcharge de Travail" data-src="Poulston (2008) ; Haldorai et al. (2019)" data-col="var(--ppm)" data-colhex="#e05c2a" data-body="Horaires étendus, pics d'activité imprévisibles, pression constante des exigences du service client. Génère fatigue chronique, stress accumulé et épuisement professionnel progressif. Effet positif significatif sur l'intention de départ à TOUS les horizons temporels — court, moyen et long terme. L'un des prédicteurs push les plus robustes et les plus constants de la littérature hôtelière.">SURCHARGE<br>TRAVAIL</div>
+    <div class="n md ppm" style="left:50px;top:662px" data-eye="Facteur Push · Région I" data-title="Tensions Interpersonnelles" data-src="Zhao & Ghiselli (2016)" data-col="var(--ppm)" data-colhex="#e05c2a" data-body="Conflits avec collègues, superviseurs et clients. Amplifié par la nature émotionnellement exigeante des métiers de service en contact direct avec la clientèle. Zhao & Ghiselli (2016) établissent ce facteur comme particulièrement prégnant dans le contexte de haute densité relationnelle de l'hôtellerie. Effet direct et relativement immédiat sur l'intention de départ.">TENSIONS<br>INTERPERS.</div>
+    <div class="n md ppm" style="left:50px;top:806px" data-eye="Facteur Push · Région I" data-title="Manque de Progression de Carrière" data-src="Haldorai et al. (2019)" data-col="var(--ppm)" data-colhex="#e05c2a" data-body="Perspectives d'évolution limitées, plafonds de verre organisationnels, absence de trajectoires ascendantes formalisées. Particulièrement déclencheur chez les jeunes employés qualifiés des Générations Y et Z qui aspirent à des trajectoires de développement rapides. Haldorai et al. (2019) confirment un effet positif significatif sur l'intention de départ à tous les horizons temporels.">CARRIÈRE<br>STAGNANTE</div>
+    <div class="n md ppm" style="left:50px;top:952px" data-eye="Facteur Push × Mooring · Région I" data-title="Conflit Travail–Vie Personnelle" data-src="Zhao & Ghiselli (2016) ; Haldorai et al. (2019)" data-col="var(--ppm)" data-colhex="#e05c2a" data-body="Horaires atypiques (soirées, week-ends, jours fériés), imprévisibilité des plannings de travail. Rend difficile voire impossible la conciliation entre exigences professionnelles et vie personnelle. Interaction clé avec le facteur mooring : plus l'implication dans la vie personnelle est élevée, plus l'effet push de ce conflit est amplifié. Constitue un vecteur d'interaction unique entre la région Push et la région Mooring.">CONFLIT<br>WLB</div>
+
+    <div class="n md ppm" style="left:320px;top:520px" data-eye="Facteur Pull · Région I" data-title="Adéquation Communautaire (Community Fit)" data-src="Brown et al. (2015) ; Haldorai et al. (2019)" data-col="var(--ppm)" data-colhex="#e05c2a" data-body="Community fit : compatibilité perçue entre les valeurs personnelles de l'employé et celles de l'organisation ou communauté alternative. Brown et al. (2015). Observation empirique majeure : effet significatif UNIQUEMENT à moyen et long terme — le processus cognitif d'évaluation et de comparaison nécessite un temps de maturation non négligeable. Non significatif à court terme, ce qui distingue fondamentalement les facteurs pull des facteurs push.">COMMUNITY<br>FIT</div>
+    <div class="n md ppm" style="left:320px;top:640px" data-eye="Facteur Pull · Région I" data-title="Opportunités de Voyage" data-src="Haldorai et al. (2019)" data-col="var(--ppm)" data-colhex="#e05c2a" data-body="Mobilité géographique, possibilités d'expatriation, opportunités de travailler dans les chaînes hôtelières internationales. Facteur pull spécifique au secteur hôtelier. Comme tous les facteurs pull, l'effet sur l'intention de départ n'est significatif qu'à moyen et long terme, reflétant la nécessité d'un processus délibératif et informationnel avant d'envisager un départ.">OPPORT.<br>VOYAGE</div>
+    <div class="n md ppm" style="left:320px;top:760px" data-eye="Facteur Pull · Région I" data-title="Statut Social Perçu" data-src="Haldorai et al. (2019)" data-col="var(--ppm)" data-colhex="#e05c2a" data-body="Prestige associé à certains établissements (hôtels de luxe, marques premium, palaces) ou à certaines fonctions dans des organisations alternatives. Recherche d'amélioration du statut social et professionnel comme motivation pull. Haldorai et al. (2019) confirment un effet différé significatif, inexistant à court terme mais présent à moyen et long terme.">STATUT<br>SOCIAL</div>
+
+    <div class="n lg ppm" style="left:190px;top:1110px" data-eye="Facteur Mooring · Région I" data-title="Implication dans la Vie Personnelle" data-src="Moon (1995) ; Haldorai et al. (2019)" data-col="var(--ppm)" data-colhex="#e05c2a" data-body="Enracinement dans la situation personnelle actuelle : responsabilités familiales et parentales, propriété immobilière, liens sociaux et associatifs locaux, engagements communautaires. Modère la relation entre le conflit travail-vie personnelle (facteur push) et l'intention de départ. Plus l'implication dans la vie personnelle est forte, plus l'effet push du conflit WLB est amplifié — résultat contre-intuitif mais robuste de Haldorai et al. (2019).">MOORING<br>IMPLICATION<br>PERSO.</div>
+
+    <div class="n lg ppm" style="left:230px;top:1282px" data-eye="Choc Exogène · Contexte France" data-title="COVID-19 : Révélateur Systémique" data-src="Jung et al. (2021) ; Dolasinski & Roberts" data-col="var(--ppm)" data-colhex="#e05c2a" data-body="Choc exogène majeur ayant révélé et dramatiquement amplifié les fragilités structurelles préexistantes du secteur hôtelier. Provoque un turnover involontaire massif et brutal. En France : dispositif de chômage partiel utilisé comme amortisseur social (limite le licenciement effectif mais n'éteint pas le sentiment d'insécurité psychologique). Phase de reprise post-COVID : pénurie structurelle de main-d'œuvre dans de nombreux métiers, reconversions professionnelles accélérées, remise en question profonde des conditions de travail.">COVID-19<br>CONTEXTE<br>HÔTELIER</div>
+    <div class="n sm ppm" style="left:96px;top:1388px" data-eye="Variable Contextuelle" data-title="Insécurité de l'Emploi" data-src="De Witte (1999) ; Jung et al. (2021)" data-col="var(--ppm)" data-colhex="#e05c2a" data-body="'Peur subjective et inconsciente de perdre son emploi' (De Witte 1999, cité dans Jung et al. 2021). Résultats empiriques de Jung et al. (2021) sur des hôtels de luxe en Corée du Sud pendant la pandémie : l'insécurité perçue épuise l'énergie physique, psychologique et mentale des employés → diminution de l'engagement → augmentation de l'intention de départ. La Génération Y est particulièrement sensible à cette insécurité.">INSÉCURITÉ<br>EMPLOI</div>
+
+    <!-- ══ BLOC II — LMX ══ -->
+    <div class="n xl lmx" style="left:1212px;top:310px" data-eye="Cadre Théorique II" data-title="Théorie LMX — Échange Leader–Membre" data-src="Graen (1976) ; Graen & Uhl-Bien (1995) ; Méta-analyse Gerstner & Day (1997)" data-col="var(--lmx)" data-colhex="#2ab8e0" data-body="Rupture épistémologique majeure avec le paradigme du leadership de style moyen (Ohio State University). Graen (1976) démontre empiriquement que les leaders travaillent différemment avec différents membres de leur équipe — la moyenne d'équipe masque des relations dyadiques fondamentalement hétérogènes. Continuum de qualité relationnel : Phase 1 Strangers (échanges contractuels formels) → Phase 2 Acquaintances (tests mutuels, partage croissant) → Phase 3 Partners (confiance, respect, obligation mutuels profonds). Méta-analyse Gerstner & Day (1997) et Dulebohn et al. (2012) confirment les effets sur satisfaction, engagement et rétention.">THÉORIE<br>LMX</div>
+
+    <div class="n md lmx" style="left:1006px;top:180px" data-eye="Antécédent Distal · Région II" data-title="Leadership Transformationnel" data-src="Bass & Avolio (2000) ; Chen & Wu (2017)" data-col="var(--lmx)" data-colhex="#2ab8e0" data-body="Vision inspirante, stimulation intellectuelle, considération individualisée, modèle comportemental exemplaire. Bass & Avolio (2000). Corrélation avec la qualité LMX : r = .71 (Wang et al. 2005). Chen & Wu (2017) : ce style constitue un antécédent DISTAL de l'intention de départ — son effet n'est pas direct mais entièrement médiatisé séquentiellement par la qualité LMX, puis par la rupture du contrat psychologique.">LEADERSHIP<br>TRANSFOR-<br>MATIONNEL</div>
+    <div class="n md lmx" style="left:1162px;top:116px" data-eye="Variable Médiatrice Clé · Région II" data-title="Qualité LMX (Échelle LMX-7)" data-src="Graen & Uhl-Bien (1995) ; Liden & Maslyn (1998)" data-col="var(--lmx)" data-colhex="#2ab8e0" data-body="Dimensions fondamentales : confiance, respect et obligation mutuels. Deux mesures principales : LMX-7 (unidimensionnel, le plus utilisé) et LMX-MDM (multidimensionnel : Affect, Loyauté, Contribution, Respect professionnel). La qualité LMX réduit la perception de rupture du contrat psychologique en signalant que l'organisation, représentée par le superviseur, honore ses engagements. Prédit directement l'intention de départ au-delà de la satisfaction au travail (Dulebohn et al. 2012).">QUALITÉ<br>LMX-7</div>
+    <div class="n md lmx" style="left:1440px;top:148px" data-eye="Extension Théorique · Région II" data-title="LMX-USA : Coaching d'Alliances Stratégiques" data-src="Graen (2012, 2017)" data-col="var(--lmx)" data-colhex="#2ab8e0" data-body="Unique Strategic Alliances (USA) : redéfinition du charisme en leadership — non comme trait individuel mystérieux mais comme résultat d'alliances interpersonnelles construites. Équipe complète = N(N-1)/2 partenariats USA. Relation monotoniquement croissante entre % de partenariats et performance collective. Études terrain de Graen et al. (1982) : +50% de performance pour les travailleurs à besoins de croissance élevés après 6 mois de coaching. Application directe à l'hôtellerie : réduction du roulement via la qualité des alliances intra-équipe.">LMX-USA<br>COACHING</div>
+    <div class="n sm lmx" style="left:1218px;top:200px" data-eye="Niveau Équipe · Région II" data-title="Différenciation LMX" data-src="Henderson et al. (2008) ; Hooper & Martin (2008)" data-col="var(--lmx)" data-colhex="#2ab8e0" data-body="Variance des qualités LMX au sein d'une même équipe. Forte différenciation → perceptions d'injustice distributive pour les membres out-group → ressentiment envers le leader et les membres in-group → comportements de retrait → départ. Tension fondamentale entre l'optimisation des relations dyadiques individuelles et le maintien de l'équité perçue au niveau collectif.">DIFFÉREN-<br>CIATION<br>LMX</div>
+    <div class="n sm lmx" style="left:1036px;top:394px" data-eye="Précurseur Historique · Région II" data-title="Lien Vertical Dyadique (VDL)" data-src="Dansereau, Graen & Haga (1975)" data-col="var(--lmx)" data-colhex="#2ab8e0" data-body="Vertical Dyad Linkage : première conceptualisation formelle et empirique de la différenciation relationnelle leader-subordonné. Dichotomie in-group (confiance, soutien, latitude décisionnelle) / out-group (contrat formel strict, échanges transactionnels limités). Fondation empirique et théorique de l'ensemble de la théorie LMX telle qu'elle s'est développée depuis.">VDL<br>DYADIQUE</div>
+    <div class="n sm lmx" style="left:902px;top:798px" data-eye="Médiateur LMX · Région II" data-title="Support Organisationnel Perçu (POS)" data-src="Wayne, Shore & Liden (1997)" data-col="var(--lmx)" data-colhex="#2ab8e0" data-body="LMX élevé → POS élevé : les employés bénéficiant d'une relation de haute qualité avec leur superviseur perçoivent davantage de soutien de la part de l'organisation dans son ensemble. Wayne et al. (1997) : les individus généralisent leurs expériences relationnelles avec leur superviseur immédiat à l'organisation entière. POS médiatise partiellement les effets de LMX sur l'engagement affectif et l'intention de départ.">POS<br>SUPPORT</div>
+
+    <!-- ══ BLOC III — PSY ══ -->
+    <div class="n xl psy" style="left:1912px;top:694px" data-eye="Cadre Théorique III" data-title="Théorie du Contrat Psychologique" data-src="Rousseau (1989) ; Chen & Wu (2017) · N = 290 · Hôtels Taiwan" data-col="var(--psy)" data-colhex="#a855f7" data-body="Croyances de l'employé concernant les obligations mutuelles entre lui-même et son employeur (Rousseau 1989). Dépasse substantiellement le contrat formel d'emploi : inclut des promesses implicites relatives à la sécurité d'emploi à long terme, aux opportunités de développement et de formation, à la reconnaissance du mérite, au traitement équitable et au soutien organisationnel. Chen & Wu (2017) : N=290 employés d'hôtels touristiques taïwanais. Démonstration d'une médiation séquentielle complète : Leadership transformationnel → Qualité LMX → Rupture du Contrat Psychologique → Intention de départ.">CONTRAT<br>PSYCHO-<br>LOGIQUE</div>
+
+    <div class="n md psy" style="left:2092px;top:542px" data-eye="Déclencheur Proximal · Région III" data-title="Rupture du Contrat Psychologique" data-src="Morrison & Robinson (1997) ; Chen & Wu (2017)" data-col="var(--psy)" data-colhex="#a855f7" data-body="Survient lorsque l'employé perçoit que l'organisation a failli à ses obligations implicites ou n'a pas tenu les promesses faites (explicitement ou non). Provoque un sentiment de trahison, d'injustice et de déséquilibre de la relation d'échange. Effet positif significatif et direct sur l'intention de départ. Chaîne causale complète démontrée par Chen & Wu (2017) : Leadership transformationnel → LMX ↑ → Rupture CP ↓ → Intention de départ ↓.">RUPTURE<br>CONTRAT PSY.</div>
+    <div class="n md psy" style="left:1760px;top:524px" data-eye="Nuance Conceptuelle · Région III" data-title="Rupture vs Violation" data-src="Morrison & Robinson (1997)" data-col="var(--psy)" data-colhex="#a855f7" data-body="Distinction conceptuelle fondamentale : Rupture = perception cognitive que les promesses contractuelles n'ont pas été tenues (dimension cognitive, évaluation). Violation = réaction émotionnelle intense consécutive à la rupture : trahison, outrage moral, indignation (dimension affective, réaction). La violation produit une intention de départ considérablement plus forte et plus rapide que la simple rupture. Morrison & Robinson (1997).">RUPTURE<br>vs<br>VIOLATION</div>
+    <div class="n sm psy" style="left:2222px;top:776px" data-eye="Mécanisme Central · Région III" data-title="Réciprocité Perçue" data-src="Blau (1964) — Théorie de l'Échange Social" data-col="var(--psy)" data-colhex="#a855f7" data-body="Théorie de l'échange social (Blau 1964) : mécanisme explicatif fondamental liant LMX aux comportements organisationnels. Les relations LMX de haute qualité créent des obligations de réciprocité perçues. Le membre ressent qu'il est redevable envers le leader → loyauté accrue → réduction de l'intention de départ car le départ serait vécu comme une trahison de la relation construite.">RÉCI-<br>PROCITÉ</div>
+    <div class="n sm psy" style="left:1966px;top:950px" data-eye="Médiateur · Région III" data-title="Justice Organisationnelle" data-src="Erdogan & Liden (2002)" data-col="var(--psy)" data-colhex="#a855f7" data-body="LMX fortement corrélé avec justice procédurale (ρ=.57) et interactionnelle (ρ=.74). Erdogan & Liden (2002) établissent que la justice organisationnelle perçue médiatise partiellement les effets de LMX sur l'engagement et la performance. Employés bénéficiant d'un LMX élevé perçoivent les processus organisationnels comme plus justes → réduction des perceptions de rupture du contrat psychologique.">JUSTICE<br>ORGA.</div>
+
+    <!-- ══ BLOC IV — RÉCOMPENSES ══ -->
+    <div class="n xl rwd" style="left:762px;top:1554px" data-eye="Cadre Théorique IV" data-title="Systèmes de Récompenses Organisationnelles" data-src="Koo et al. (2019) · N = 336 · Hôtels Corée du Sud" data-col="var(--rwd)" data-colhex="#22c55e" data-body="Distinction fondamentale entre deux catégories de récompenses : émotionnelles (intangibles) et matérielles (tangibles). Les deux catégories influencent positivement la satisfaction au travail et négativement l'épuisement professionnel. Double médiation parallèle vers l'intention de départ : (1) chemin positif via l'augmentation de la satisfaction au travail, (2) chemin négatif via la réduction du burnout. Koo et al. (2019) : N=336 employés hôteliers sud-coréens. Implication pratique : une stratégie de rétention ne peut se limiter aux seules récompenses matérielles.">SYSTÈMES<br>DE<br>RÉCOMPENSES</div>
+
+    <div class="n md rwd" style="left:590px;top:1482px" data-eye="Variable Indépendante · Région IV" data-title="Récompenses Émotionnelles" data-src="Koo et al. (2019)" data-col="var(--rwd)" data-colhex="#22c55e" data-body="Gratifications intangibles répondant aux besoins psychologiques profonds : reconnaissance et appréciation authentique du travail accompli, autonomie et latitude décisionnelle, sentiment d'accomplissement et de compétence, soutien émotionnel des superviseurs et des collègues. Satisfont les besoins d'estime, de compétence et d'autodétermination (SDT, Deci & Ryan 1985). Réduisent spécifiquement le burnout émotionnel et la dépersonnalisation.">RÉCOMP.<br>ÉMOTIONN.</div>
+    <div class="n md rwd" style="left:590px;top:1662px" data-eye="Variable Indépendante · Région IV" data-title="Récompenses Matérielles" data-src="Koo et al. (2019)" data-col="var(--rwd)" data-colhex="#22c55e" data-body="Gratifications tangibles et économiques : rémunération de base compétitive par rapport au marché, primes et bonus de performance individuels et collectifs, opportunités de promotion formelle avec trajectoires claires, avantages sociaux (mutuelle, retraite, tickets restaurant), incitations financières diverses. Répondent aux besoins économiques et de sécurité matérielle. Signalent à l'employé sa valeur et sa reconnaissance par l'organisation.">RÉCOMP.<br>MATÉRIELLES</div>
+    <div class="n md rwd" style="left:976px;top:1482px" data-eye="Médiateur Positif · Région IV" data-title="Satisfaction au Travail" data-src="Koo et al. (2019) ; Cohen (1991)" data-col="var(--rwd)" data-colhex="#22c55e" data-body="État affectif positif global envers l'emploi. Premier chemin médiateur : Récompenses → Satisfaction ↑ → Engagement affectif ↑ et Performance dans le rôle ↑ → Intention de départ ↓. Cohen (1991) : l'effet de la satisfaction sur la rétention est considérablement plus fort en début de carrière qu'aux stades intermédiaire et tardif — implication stratégique majeure pour les politiques d'intégration des nouvelles recrues dans le secteur hôtelier.">SATISFACTION<br>TRAVAIL</div>
+    <div class="n md rwd" style="left:976px;top:1662px" data-eye="Médiateur Négatif · Région IV" data-title="Épuisement Professionnel (Burnout)" data-src="Koo et al. (2019) ; Jung et al. (2021)" data-col="var(--rwd)" data-colhex="#22c55e" data-body="Fatigue émotionnelle, cynisme et désengagement, réduction du sentiment d'accomplissement personnel. Second chemin médiateur : Récompenses → Burnout ↓ → Engagement affectif ↑ → Intention de départ ↓. Jung et al. (2021) : l'insécurité de l'emploi (amplifiée par le contexte COVID) épuise les ressources psychologiques et physiques des employés, amplifiant le burnout. Les récompenses, en réduisant le burnout, préviennent indirectement le désengagement et le turnover.">BURNOUT<br>ÉPUISEMENT</div>
+
+    <!-- ══ BLOC V — ENGAGEMENT ══ -->
+    <div class="n xl eng" style="left:1524px;top:1436px" data-eye="Cadre Théorique V" data-title="Engagement Organisationnel Affectif" data-src="Guzeller & Celiker (2020) · Méta-analyse · N total = 4 047" data-col="var(--eng)" data-colhex="#f59e0b" data-body="Attachement émotionnel à l'organisation, identification avec ses valeurs fondamentales et implication profonde dans ses activités (Allen & Meyer 1990). Méta-analyse de Guzeller & Celiker (2020) portant sur 13 études empiriques conduites dans le secteur touristique et hôtelier, N total = 4 047 participants. Résultat central : relation négative modérée mais remarquablement consistante entre l'engagement affectif et l'intention de départ. Variable nodale du modèle : joue à la fois le rôle de médiateur (des effets de la satisfaction) ET de prédicteur direct robuste de l'intention de départ. Cohen (1991) : relation plus forte en début de carrière.">ENGAGEMENT<br>AFFECTIF</div>
+    <div class="n md eng" style="left:1318px;top:1340px" data-eye="Dimensions Complémentaires · Région V" data-title="Engagement Normatif & Continu" data-src="Allen & Meyer (1990) ; Meyer et al. (2002)" data-col="var(--eng)" data-colhex="#f59e0b" data-body="Meyer & Allen (1990) : modèle tripartite de l'engagement organisationnel. Normatif : sentiment d'obligation morale de rester dans l'organisation, sentiment de dette. Continu : calcul des coûts perçus du départ — perte d'ancienneté, d'avantages acquis, incertitude liée au changement. Méta-analyse Meyer et al. (2002) : parmi les trois composantes, l'affectif présente la relation négative la plus forte avec l'intention de départ.">ENGAGE.<br>NORMATIF<br>& CONTINU</div>
+    <div class="n md eng" style="left:1738px;top:1340px" data-eye="Mécanisme · Région V" data-title="Identification Organisationnelle" data-src="Mécanisme central de l'engagement affectif" data-col="var(--eng)" data-colhex="#f59e0b" data-body="Alignement perçu entre les valeurs personnelles de l'employé et les valeurs affichées de l'organisation. Sentiment d'appartenance profond et fierté d'être membre de l'organisation. Ce mécanisme d'identification réduit significativement l'attractivité des alternatives externes, même en présence de conditions de travail objectivement difficiles. Constitue le mécanisme explicatif central de la relation engagement affectif → rétention durable.">IDENTIF.<br>ORGANIS.</div>
+
+    <!-- ══ BLOC VI — LACUNES ══ -->
+    <div class="n lg gap" style="left:2380px;top:536px" data-eye="Lacune #1 · Région VI" data-title="Temporalité Non Intégrée" data-src="Gap identifié — Contribution originale" data-col="var(--gap)" data-colhex="#f43f5e" data-body="LACUNE IDENTIFIÉE : Aucune des trois théories mobilisées ne modélise l'évolution temporelle des mécanismes causaux de façon intégrée et cohérente. Le PPM distingue les horizons CT/MT/LT uniquement pour les facteurs Pull. La théorie LMX et le Contrat Psychologique ignorent totalement la dimension temporelle. Cette lacune empêche de comprendre comment les mécanismes évoluent et s'articulent dans le temps. → La nouvelle théorie MIDDTH intègre une temporalité explicite et différenciée pour chaque type de mécanisme.">LACUNE #1<br>TEMPORALITÉ<br>NON INTÉGRÉE</div>
+    <div class="n lg gap" style="left:2548px;top:792px" data-eye="Lacune #2 · Région VI" data-title="Différences Générationnelles Absentes" data-src="Gap identifié — Jung et al. (2021)" data-col="var(--gap)" data-colhex="#f43f5e" data-body="LACUNE IDENTIFIÉE : Les théories mobilisées ignorent systématiquement les différences générationnelles (Gen Y/Z) comme variables modératrices formelles. Jung et al. (2021) signalent la sensibilité accrue de la Génération Y à l'insécurité d'emploi sans jamais la formaliser dans un modèle. Attentes renouvelées des jeunes générations : sens et purpose au travail, flexibilité horaire, engagement RSE de l'employeur, management participatif et co-construction. → Opportunité théorique majeure et non exploitée dans la littérature existante.">LACUNE #2<br>DIFFÉRENCES<br>GÉN. Y/Z</div>
+    <div class="n lg gap" style="left:2380px;top:1082px" data-eye="Lacune #3 · Région VI" data-title="Travail Émotionnel Absent" data-src="Gap identifié — Hochschild (1983)" data-col="var(--gap)" data-colhex="#f43f5e" data-body="LACUNE IDENTIFIÉE : Le travail émotionnel (emotional labor, Hochschild 1983) est totalement absent de tous les modèles étudiés, malgré son caractère central et incontournable dans les métiers d'accueil hôtelier. La gestion permanente des émotions dans les interactions client-employé constitue une variable médiatrice essentielle entre les conditions de travail (facteurs push) et l'épuisement professionnel (burnout). Aucun des cadres théoriques présentés ne formalise ce lien pourtant empiriquement bien documenté.">LACUNE #3<br>TRAVAIL<br>ÉMOTIONNEL</div>
+    <div class="n lg gap" style="left:2548px;top:1338px" data-eye="Lacune #4 · Région VI" data-title="Niveau Équipe & Contagion Ignorés" data-src="Gap identifié — Hatfield et al. (1993)" data-col="var(--gap)" data-colhex="#f43f5e" data-body="LACUNE IDENTIFIÉE : Toutes les théories mobilisées opèrent exclusivement au niveau individuel, ignorant les dynamiques collectives. La contagion émotionnelle (Hatfield et al. 1993) et les effets de turnover en cascade au niveau équipe sont totalement absents des modèles. Fait empirique bien documenté mais non formalisé : un employé qui observe le départ répété de ses collègues augmente significativement sa propre intention de départ. La différenciation LMX est mentionnée mais non intégrée dans les modèles PPM et Contrat Psychologique.">LACUNE #4<br>NIVEAU ÉQUIPE<br>& CONTAGION</div>
+    <div class="n lg gap" style="left:2290px;top:1614px" data-eye="Lacune #5 · Région VI" data-title="Fossé Théorie / Pratiques RH" data-src="Gap identifié — Contribution managériale" data-col="var(--gap)" data-colhex="#f43f5e" data-body="LACUNE IDENTIFIÉE : Le rôle des pratiques RH formelles et concrètes — onboarding structuré et prolongé, entretiens réguliers de suivi, gestion prévisionnelle des emplois et compétences (GPEC), plans de développement individuels, systèmes de feedback continu — comme modérateurs des effets des théories est totalement absent de tous les modèles étudiés. Les études empiriques mesurent des intentions de départ sans jamais évaluer l'impact des interventions RH concrètes. Fossé structurel critique entre la recherche académique et la pratique managériale quotidienne.">LACUNE #5<br>FOSSÉ<br>THÉORIE↔RH</div>
+
+    <!-- ══ NOUVELLE THÉORIE ══ -->
+    <div class="n nw" style="left:2870px;top:952px;width:240px;height:240px;text-align:center"
+      data-eye="Synthèse — Proposition Théorique Originale"
+      data-title="MIDDTH — Modèle Intégratif Dynamique des Déterminants du Turnover Hôtelier"
+      data-src="Proposition originale — Contribution de ce mémoire"
+      data-col="var(--gold)" data-colhex="#e8b84b"
+      data-body="Modèle de synthèse émergent des lacunes identifiées dans les trois cadres théoriques et enrichi par leurs apports complémentaires. Le MIDDTH intègre cinq innovations majeures absentes des théories existantes : (1) Une temporalité explicite et différenciée des mécanismes causaux — chaque lien est modélisé selon son horizon d'action ; (2) Les variables générationnelles Gen Y/Z comme modérateurs formels et mesurables ; (3) Le travail émotionnel (Hochschild 1983) comme variable médiatrice centrale entre conditions de travail et épuisement professionnel ; (4) Une architecture multi-niveaux : individuel, équipe et organisation — intégrant la contagion émotionnelle et les effets de cascade ; (5) Les pratiques RH formelles comme variables intervenantes mesurables et actionnables. Dépasse la fragmentation des théories existantes en un cadre systémique, cohérent et directement applicable à l'industrie hôtelière contemporaine post-COVID.">
+      MIDDTH<br><br>★ Nouvelle<br>Théorie RH
+    </div>
+
+  </div><!-- /stage -->
+</div><!-- /arena -->
+
+<!-- FOOTER -->
+<div id="footer">
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:var(--ppm)"></div><span class="leg-label">PPM / Contexte</span></div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--lmx)"></div><span class="leg-label">LMX</span></div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--psy)"></div><span class="leg-label">Contrat Psychologique</span></div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--rwd)"></div><span class="leg-label">Récompenses</span></div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--eng)"></div><span class="leg-label">Engagement Affectif</span></div>
+    <div class="leg-item"><div class="leg-ring" style="border-color:var(--gap)"></div><span class="leg-label">Lacune Théorique</span></div>
+    <div class="leg-item"><div class="leg-ring" style="border-color:var(--gold)"></div><span class="leg-label">MIDDTH</span></div>
+    <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+    <div class="leg-item"><div style="width:20px;height:1px;background:rgba(255,255,255,0.3)"></div><span class="leg-label">Lien direct</span></div>
+    <div class="leg-item"><div style="width:20px;height:0;border-top:1.5px dashed rgba(255,255,255,0.25)"></div><span class="leg-label">Lien médiateur</span></div>
+    <div class="leg-item"><div style="width:20px;height:0;border-top:1.5px dashed rgba(244,63,94,0.5)"></div><span class="leg-label">Lacune → MIDDTH</span></div>
+  </div>
+  <div class="zoom-ctrl">
+    <button class="zbtn" onclick="doZoom(-0.12)">−</button>
+    <span id="z-pct">42%</span>
+    <button class="zbtn" onclick="doZoom(0.12)">+</button>
+  </div>
+</div>
+
+<script>
+/* ─── STATE ─────────────────────────────────────── */
+var arena  = document.getElementById('arena');
+var stage  = document.getElementById('stage');
+var cvs    = document.getElementById('cvs');
+var ctx    = cvs.getContext('2d');
+var sc = 0.40, tx = -150, ty = -120;
+var drag = false, lx = 0, ly = 0;
+var activeNode = null;
+
+function applyT() {
+  stage.style.transform = 'translate('+Math.round(tx)+'px,'+Math.round(ty)+'px) scale('+sc+')';
+  document.getElementById('z-pct').textContent = Math.round(sc*100)+'%';
+}
+applyT();
+
+/* ─── PAN ───────────────────────────────────────── */
+arena.addEventListener('mousedown', function(e) {
+  if (e.target.classList.contains('n') || e.target.classList.contains('nw')) return;
+  drag = true; lx = e.clientX; ly = e.clientY;
+  arena.classList.add('dragging');
+});
+window.addEventListener('mouseup', function() { drag = false; arena.classList.remove('dragging'); });
+window.addEventListener('mousemove', function(e) {
+  if (!drag) return;
+  tx += e.clientX - lx; ty += e.clientY - ly;
+  lx = e.clientX; ly = e.clientY;
+  applyT(); drawAll();
+});
+
+/* ─── ZOOM ──────────────────────────────────────── */
+arena.addEventListener('wheel', function(e) {
+  e.preventDefault();
+  var f = e.deltaY < 0 ? 1.09 : 0.92;
+  var r = arena.getBoundingClientRect();
+  var mx = e.clientX - r.left, my = e.clientY - r.top;
+  tx = mx - (mx - tx)*f; ty = my - (my - ty)*f;
+  sc = Math.max(0.12, Math.min(2.5, sc*f));
+  applyT(); drawAll();
+}, {passive:false});
+
+function doZoom(d) {
+  var f = 1 + d;
+  var cx = arena.clientWidth/2, cy = arena.clientHeight/2;
+  tx = cx - (cx - tx)*f; ty = cy - (cy - ty)*f;
+  sc = Math.max(0.12, Math.min(2.5, sc*f));
+  applyT(); drawAll();
+}
+
+function resetView() {
+  sc = 0.40; tx = -150; ty = -120;
+  applyT(); drawAll();
+}
+
+/* ─── CANVAS ────────────────────────────────────── */
+function resizeCvs() {
+  cvs.width  = 4000;
+  cvs.height = 2800;
+  drawAll();
+}
+setTimeout(resizeCvs, 80);
+window.addEventListener('resize', drawAll);
+
+/* ─── NODE CENTRES (in stage px) ────────────────── */
+var N = {
+  center:[1537,1094],
+  ppm:[297,847],   push1:[96,570],  push2:[96,708], push3:[96,852], push4:[96,998],
+  pull1:[366,566], pull2:[366,686], pull3:[366,806],
+  mooring:[254,1174], covid:[294,1346], insec:[132,1423],
+  lmx:[1299,397],  tleader:[1052,226], lmxq:[1208,162],
+  lmxusa:[1487,194], diff:[1254,246], vdl:[1082,441], pos:[948,845],
+  psy:[1999,781],  rupture:[2138,589], violation:[1807,571],
+  recipro:[2268,823], justice:[2013,997],
+  reward:[849,1641], emo:[637,1529], mat:[637,1709],
+  sat:[1023,1529],   burnout:[1023,1709],
+  engage:[1611,1523], norm:[1405,1387], ident:[1825,1387],
+  gap1:[2445,601],  gap2:[2613,857],
+  gap3:[2445,1147], gap4:[2613,1403], gap5:[2355,1679],
+  newth:[2990,1072]
+};
+
+/* ─── CONNECTIONS ────────────────────────────────── */
+var CONN = [
+  // PPM inner
+  ['ppm','push1','#e05c2a',1.6,0,0.5],['ppm','push2','#e05c2a',1.6,0,0.5],
+  ['ppm','push3','#e05c2a',1.6,0,0.5],['ppm','push4','#e05c2a',1.6,0,0.5],
+  ['ppm','pull1','#e05c2a',1.2,1,0.42],['ppm','pull2','#e05c2a',1.2,1,0.42],
+  ['ppm','pull3','#e05c2a',1.2,1,0.42],['ppm','mooring','#e05c2a',1.4,0,0.48],
+  // Push → center
+  ['push1','center','#e05c2a',2,0,0.42],['push2','center','#e05c2a',2,0,0.42],
+  ['push3','center','#e05c2a',2,0,0.42],['push4','center','#e05c2a',2,0,0.42],
+  ['pull2','center','#e05c2a',1.3,1,0.32],['pull3','center','#e05c2a',1.3,1,0.32],
+  ['mooring','push4','#e05c2a',1.3,1,0.48],['mooring','center','#e05c2a',1,1,0.2],
+  ['covid','insec','#e05c2a',1.2,0,0.42],['insec','burnout','#e05c2a',1.4,1,0.38],
+  ['insec','center','#e05c2a',1,1,0.22],['covid','ppm','#e05c2a',1.3,1,0.35],
+  // LMX inner
+  ['tleader','lmxq','#2ab8e0',1.5,0,0.52],['tleader','lmx','#2ab8e0',1.9,0,0.52],
+  ['vdl','lmx','#2ab8e0',1.2,0,0.42],['lmx','lmxq','#2ab8e0',2,0,0.58],
+  ['lmx','diff','#2ab8e0',1.2,1,0.42],['lmx','lmxusa','#2ab8e0',1.2,0,0.42],
+  ['lmx','pos','#2ab8e0',1.2,1,0.38],
+  // LMX → PSY
+  ['lmxq','rupture','#2ab8e0',1.6,0,0.48],['lmxq','psy','#2ab8e0',1.4,0,0.38],
+  ['lmx','psy','#2ab8e0',1.6,0,0.36],
+  // LMX → center
+  ['lmxq','center','#2ab8e0',2,0,0.46],['lmx','center','#2ab8e0',1.6,0,0.36],
+  ['pos','center','#2ab8e0',1.2,1,0.3],
+  // PSY inner
+  ['psy','rupture','#a855f7',2,0,0.58],['psy','violation','#a855f7',1.4,0,0.46],
+  ['psy','recipro','#a855f7',1.2,1,0.38],['rupture','violation','#a855f7',1,0,0.36],
+  ['psy','justice','#a855f7',1.2,0,0.4],
+  // PSY → center
+  ['rupture','center','#a855f7',2,0,0.5],['psy','center','#a855f7',1.4,0,0.33],
+  ['justice','center','#a855f7',1.1,1,0.26],
+  // Reward inner
+  ['reward','emo','#22c55e',1.5,0,0.52],['reward','mat','#22c55e',1.5,0,0.52],
+  ['reward','sat','#22c55e',1.5,0,0.52],['reward','burnout','#22c55e',1.5,0,0.52],
+  ['emo','sat','#22c55e',1.2,0,0.44],['emo','burnout','#22c55e',1.2,0,0.44],
+  ['mat','sat','#22c55e',1.2,0,0.44],['mat','burnout','#22c55e',1.2,0,0.44],
+  ['sat','engage','#22c55e',1.8,0,0.52],['sat','center','#22c55e',2,0,0.46],
+  ['burnout','engage','#22c55e',1.4,1,0.44],['burnout','center','#f43f5e',2,0,0.44],
+  // Engagement → center
+  ['engage','center','#f59e0b',2.4,0,0.58],['engage','norm','#f59e0b',1.2,0,0.36],
+  ['engage','ident','#f59e0b',1.2,0,0.36],
+  ['norm','center','#f59e0b',1,1,0.24],['ident','center','#f59e0b',1,1,0.24],
+  // Cross-theory
+  ['lmxq','sat','#6bb8d0',1.4,1,0.38],['lmxq','engage','#6bb8d0',1.8,1,0.44],
+  ['lmxq','burnout','#6bb8d0',1.2,1,0.33],
+  ['rupture','burnout','#a855f7',1.4,1,0.38],
+  ['ppm','engage','#e05c2a',1,1,0.24],
+  ['tleader','reward','#2ab8e0',1,1,0.26],
+  ['pos','engage','#2ab8e0',1,1,0.26],
+  // Gap origins
+  ['lmx','gap1','#f43f5e',1,1,0.24],['ppm','gap1','#f43f5e',1,1,0.24],
+  ['covid','gap2','#f43f5e',1,1,0.2],
+  ['burnout','gap3','#f43f5e',1,1,0.28],
+  ['diff','gap4','#f43f5e',1,1,0.26],
+  ['reward','gap5','#f43f5e',1,1,0.2],
+  // Gaps → MIDDTH
+  ['gap1','newth','#f43f5e',1.6,1,0.55],['gap2','newth','#f43f5e',1.6,1,0.55],
+  ['gap3','newth','#f43f5e',1.6,1,0.55],['gap4','newth','#f43f5e',1.6,1,0.55],
+  ['gap5','newth','#f43f5e',1.6,1,0.55],
+  // All theories → MIDDTH (synthesis)
+  ['ppm','newth','#e05c2a',1.1,1,0.15],['lmx','newth','#2ab8e0',1.1,1,0.15],
+  ['psy','newth','#a855f7',1.1,1,0.15],['reward','newth','#22c55e',1.1,1,0.15],
+  ['engage','newth','#f59e0b',1.1,1,0.15]
+];
+
+function drawCurve(ax,ay,bx,by,col,lw,dsh,al) {
+  ctx.save();
+  ctx.globalAlpha = al;
+  ctx.strokeStyle = col;
+  ctx.lineWidth = lw;
+  ctx.lineCap = 'round';
+  ctx.setLineDash(dsh ? [6,9] : []);
+  var dx=bx-ax, dy=by-ay;
+  var bend = 0.13;
+  ctx.beginPath();
+  ctx.moveTo(ax,ay);
+  ctx.bezierCurveTo(
+    ax+dx*0.38+dy*bend, ay+dy*0.38-dx*bend,
+    ax+dx*0.62-dy*bend, ay+dy*0.62+dx*bend,
+    bx, by
+  );
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawAll() {
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  for (var i=0; i<CONN.length; i++) {
+    var c=CONN[i];
+    if (!N[c[0]]||!N[c[1]]) continue;
+    var a=N[c[0]], b=N[c[1]];
+    drawCurve(a[0],a[1],b[0],b[1],c[2],c[3],c[4],c[5]);
+  }
+}
+drawAll();
+
+/* ─── PANEL ─────────────────────────────────────── */
+var panel = document.getElementById('panel');
+var ptbar = document.getElementById('ptbar');
+
+function openPanel(el) {
+  var col = el.getAttribute('data-colhex') || '#e8b84b';
+  document.getElementById('p-eye').textContent   = el.getAttribute('data-eye')   || '';
+  document.getElementById('p-eye').style.color   = col;
+  document.getElementById('p-title').textContent = el.getAttribute('data-title') || '';
+  document.getElementById('p-src').textContent   = el.getAttribute('data-src')   || '';
+  document.getElementById('p-body').textContent  = el.getAttribute('data-body')  || '';
+  ptbar.style.background = col;
+  panel.classList.add('open');
+}
+
+function closePanel() { panel.classList.remove('open'); }
+
+function togglePanel(el, showIntro) {
+  if (showIntro) {
+    document.getElementById('p-eye').textContent   = 'Introduction au Modèle';
+    document.getElementById('p-eye').style.color   = 'var(--gold)';
+    document.getElementById('p-title').textContent = 'Cartographie des Déterminants du Turnover';
+    document.getElementById('p-src').textContent   = 'Mémoire de Recherche — Management Hôtelier';
+    document.getElementById('p-body').textContent  = 'Cette carte neurale représente l\'architecture complète des déterminants du turnover dans l\'industrie hôtelière. Six régions théoriques sont cartographiées : (I) Le modèle Push–Pull–Mooring identifie les forces qui poussent, attirent et ancrent les employés. (II) La théorie LMX éclaire la qualité différenciée des relations leader–membre. (III) Le Contrat Psychologique révèle les mécanismes de rupture de confiance. (IV) Les systèmes de récompenses agissent via une double médiation satisfaction/burnout. (V) L\'engagement affectif constitue le prédicteur direct central. (VI) Cinq lacunes théoriques majeures convergent vers la proposition du MIDDTH — Modèle Intégratif Dynamique des Déterminants du Turnover Hôtelier. Cliquez sur chaque nœud pour explorer les détails théoriques. Faites glisser pour naviguer, molette pour zoomer.';
+    ptbar.style.background = 'var(--gold)';
+    panel.classList.add('open');
+  } else {
+    panel.classList.toggle('open');
+  }
+}
+
+/* ─── TOOLTIP & CLICKS ──────────────────────────── */
+var tip = document.getElementById('tip');
+var allN = document.querySelectorAll('.n, .nw');
+
+for (var i=0; i<allN.length; i++) {
+  (function(el) {
+    el.addEventListener('mouseenter', function(e) {
+      var col = el.getAttribute('data-colhex') || '#e8b84b';
+      document.getElementById('tip-src').textContent  = el.getAttribute('data-eye') || '';
+      document.getElementById('tip-src').style.color  = col;
+      document.getElementById('tip-name').textContent = el.getAttribute('data-title') || '';
+      tip.style.display = 'block';
+    });
+    el.addEventListener('mousemove', function(e) {
+      var x=e.clientX+18, y=e.clientY-14;
+      if (x+270>window.innerWidth)  x=e.clientX-285;
+      if (y+130>window.innerHeight) y=e.clientY-145;
+      tip.style.left=x+'px'; tip.style.top=y+'px';
+    });
+    el.addEventListener('mouseleave', function() { tip.style.display='none'; });
+    el.addEventListener('click', function() {
+      tip.style.display = 'none';
+      if (activeNode) activeNode.classList.remove('active');
+      activeNode = el; el.classList.add('active');
+      openPanel(el);
+    });
+  })(allN[i]);
+}
+
+/* click on empty space = close panel */
+arena.addEventListener('click', function(e) {
+  if (!e.target.classList.contains('n') && !e.target.classList.contains('nw')) {
+    closePanel();
+    if (activeNode) { activeNode.classList.remove('active'); activeNode=null; }
+  }
+});
+</script>
+</body>
+</html>
